@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "rn-cards",
-    "slug": "rn-cards",
+    "name": "Cards Sample",
+    "slug": "cards-sample",
     "version": "1.0.0",
+    "owner": "epti",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -17,13 +18,15 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ivbrajkovic.cardssample"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
-      }
+      },
+      "package": "com.ivbrajkovic.cardssample"
     },
     "web": {
       "favicon": "./assets/favicon.png"
