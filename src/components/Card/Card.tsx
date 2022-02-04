@@ -1,5 +1,5 @@
 import React, { FC, useEffect, useRef } from "react";
-import { Dimensions, Image, StyleSheet, View, Platform } from "react-native";
+import { Dimensions, Image, View } from "react-native";
 import {
   PanGestureHandler,
   PanGestureHandlerGestureEvent,
@@ -14,7 +14,9 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { snapPoint } from "../utils";
+import { snapPoint } from "../../utils";
+
+import stylesFactory from "./styles";
 
 const { width: wWidth, height: wHeight } = Dimensions.get("window");
 
@@ -32,42 +34,19 @@ interface CardProps {
     source: ReturnType<typeof require>;
   };
   shuffleBack: Animated.SharedValue<boolean>;
+  lastRemovedCard: Animated.SharedValue<number>;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  card: {
-    ...Platform.select({
-      android: {
-        borderColor: "black",
-        borderWidth: 1,
-      },
-    }),
-    backgroundColor: "white",
-    borderRadius: 10,
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    // elevation: 5,
-  },
+const styles = stylesFactory({
+  cardHeight: CARD_HEIGHT,
+  cardWidth: CARD_WIDTH,
 });
 
 export const Card: FC<CardProps> = ({
   index,
   card: { source },
   shuffleBack,
+  lastRemovedCard,
 }) => {
   const thetaRef = useRef(-10 + Math.random() * 20);
 
@@ -78,7 +57,6 @@ export const Card: FC<CardProps> = ({
 
   useEffect(() => {
     const delay = index * DURATION;
-
     y.value = withDelay(
       delay,
       withTiming(0, {
@@ -99,17 +77,15 @@ export const Card: FC<CardProps> = ({
   useAnimatedReaction(
     () => shuffleBack.value,
     (value) => {
-      if (value) {
-        const delay = 150 * index;
-
-        x.value = withDelay(delay, withSpring(0));
-        rotateZ.value = withDelay(
-          delay,
-          withSpring(thetaRef.current, {}, () => {
-            shuffleBack.value = false;
-          }),
-        );
-      }
+      if (!value) return;
+      const delay = 150 * index;
+      x.value = withDelay(delay, withSpring(0));
+      rotateZ.value = withDelay(
+        delay,
+        withSpring(thetaRef.current, {}, () => {
+          shuffleBack.value = false;
+        }),
+      );
     },
   );
 
@@ -129,6 +105,9 @@ export const Card: FC<CardProps> = ({
     },
     onEnd: ({ velocityX, velocityY }) => {
       const dest = snapPoint(x.value, velocityX, SNAP_POINTS);
+      if (dest !== 0) lastRemovedCard.value = index;
+      console.log(lastRemovedCard.value);
+
       x.value = withSpring(dest, { velocity: velocityX });
       y.value = withSpring(0, { velocity: velocityY });
       rotateZ.value = withTiming(0, { easing: Easing.inOut(Easing.ease) });
@@ -140,19 +119,17 @@ export const Card: FC<CardProps> = ({
     },
   });
 
-  const style = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { perspective: 1000 },
-        { rotateX: "30deg" },
-        { translateX: x.value },
-        { translateY: y.value },
-        { rotateY: `${rotateZ.value / 10}deg` },
-        { rotateZ: `${rotateZ.value}deg` },
-        { scale: scale.value },
-      ],
-    };
-  });
+  const style = useAnimatedStyle(() => ({
+    transform: [
+      { perspective: 1000 },
+      { rotateX: "30deg" },
+      { translateX: x.value },
+      { translateY: y.value },
+      { rotateY: `${rotateZ.value / 10}deg` },
+      { rotateZ: `${rotateZ.value}deg` },
+      { scale: scale.value },
+    ],
+  }));
 
   return (
     <View style={styles.container} pointerEvents="box-none">
