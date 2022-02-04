@@ -97,25 +97,33 @@ export const Card: FC<CardProps> = ({
       ctx.startX = x.value;
       ctx.startY = y.value;
       rotateZ.value = withTiming(0, { easing: Easing.inOut(Easing.ease) });
-      scale.value = withTiming(1.1, { easing: Easing.inOut(Easing.ease) });
+      // scale.value = withTiming(1.1, { easing: Easing.inOut(Easing.ease) });
     },
     onActive: (event, ctx) => {
       x.value = ctx.startX + event.translationX;
       y.value = ctx.startY + event.translationY;
     },
-    onEnd: ({ velocityX, velocityY }) => {
+    onFinish: ({ velocityX, velocityY }) => {
       const dest = snapPoint(x.value, velocityX, SNAP_POINTS);
       if (dest !== 0) lastRemovedCard.value = index;
       console.log(lastRemovedCard.value);
 
       x.value = withSpring(dest, { velocity: velocityX });
       y.value = withSpring(0, { velocity: velocityY });
-      rotateZ.value = withTiming(0, { easing: Easing.inOut(Easing.ease) });
-      scale.value = withTiming(1, { easing: Easing.inOut(Easing.ease) }, () => {
-        if (index === 0 && dest) {
-          shuffleBack.value = true;
-        }
-      });
+      rotateZ.value = withTiming(
+        0,
+        { easing: Easing.inOut(Easing.ease) },
+        () => {
+          if (index === 0 && dest) {
+            shuffleBack.value = true;
+          }
+        },
+      );
+      // scale.value = withTiming(1, { easing: Easing.inOut(Easing.ease) }, () => {
+      //   if (index === 0 && dest) {
+      //     shuffleBack.value = true;
+      //   }
+      // });
     },
   });
 

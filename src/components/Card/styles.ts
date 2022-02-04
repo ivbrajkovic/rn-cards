@@ -11,6 +11,7 @@ export default ({ cardWidth, cardHeight }: IStyles) =>
       ...StyleSheet.absoluteFillObject,
       justifyContent: "center",
       alignItems: "center",
+      // backgroundColor: "red",
     },
     card: {
       ...Platform.select({
