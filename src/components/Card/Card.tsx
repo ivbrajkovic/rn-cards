@@ -14,6 +14,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { CardProps, ScreenSide } from "../../types";
 import { snapPoint } from "../../utils";
 
 import stylesFactory from "./styles";
@@ -28,15 +29,6 @@ const SIDE = (wWidth + CARD_WIDTH + 100) / 2;
 const SNAP_POINTS = [-SIDE, 0, SIDE];
 const DURATION = 250;
 
-interface CardProps {
-  index: number;
-  card: {
-    source: ReturnType<typeof require>;
-  };
-  shuffleBack: Animated.SharedValue<boolean>;
-  lastRemovedCard: Animated.SharedValue<number>;
-}
-
 const styles = stylesFactory({
   cardHeight: CARD_HEIGHT,
   cardWidth: CARD_WIDTH,
@@ -46,7 +38,8 @@ export const Card: FC<CardProps> = ({
   index,
   card: { source },
   shuffleBack,
-  lastRemovedCard,
+  putBackCardIndex,
+  removedCardsQueue,
 }) => {
   const thetaRef = useRef(-10 + Math.random() * 20);
 
@@ -75,6 +68,15 @@ export const Card: FC<CardProps> = ({
   }, []);
 
   useAnimatedReaction(
+    () => putBackCardIndex.value,
+    (value) => {
+      if (!value || value !== index) return;
+      x.value = withSpring(0);
+      putBackCardIndex.value = -1;
+    },
+  );
+
+  useAnimatedReaction(
     () => shuffleBack.value,
     (value) => {
       if (!value) return;
@@ -97,7 +99,7 @@ export const Card: FC<CardProps> = ({
       ctx.startX = x.value;
       ctx.startY = y.value;
       rotateZ.value = withTiming(0, { easing: Easing.inOut(Easing.ease) });
-      // scale.value = withTiming(1.1, { easing: Easing.inOut(Easing.ease) });
+      scale.value = withTiming(1.1, { easing: Easing.inOut(Easing.ease) });
     },
     onActive: (event, ctx) => {
       x.value = ctx.startX + event.translationX;
@@ -105,25 +107,21 @@ export const Card: FC<CardProps> = ({
     },
     onFinish: ({ velocityX, velocityY }) => {
       const dest = snapPoint(x.value, velocityX, SNAP_POINTS);
-      if (dest !== 0) lastRemovedCard.value = index;
-      console.log(lastRemovedCard.value);
+      if (dest !== 0) {
+        removedCardsQueue.value.push({
+          side: dest < 0 ? ScreenSide.LEFT : ScreenSide.RIGHT,
+          index,
+        });
+      }
 
       x.value = withSpring(dest, { velocity: velocityX });
       y.value = withSpring(0, { velocity: velocityY });
-      rotateZ.value = withTiming(
-        0,
-        { easing: Easing.inOut(Easing.ease) },
-        () => {
-          if (index === 0 && dest) {
-            shuffleBack.value = true;
-          }
-        },
-      );
-      // scale.value = withTiming(1, { easing: Easing.inOut(Easing.ease) }, () => {
-      //   if (index === 0 && dest) {
-      //     shuffleBack.value = true;
-      //   }
-      // });
+      rotateZ.value = withTiming(0);
+      scale.value = withTiming(1, { easing: Easing.inOut(Easing.ease) }, () => {
+        if (index === 0 && dest) {
+          shuffleBack.value = true;
+        }
+      });
     },
   });
 

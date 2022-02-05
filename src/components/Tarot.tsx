@@ -9,6 +9,7 @@ import Animated, {
   useAnimatedGestureHandler,
   useSharedValue,
 } from "react-native-reanimated";
+import { Queue, QueueItem, ScreenSide } from "../types";
 import { Card } from "./Card/Card";
 
 import styles from "./styles";
@@ -46,15 +47,33 @@ export const assets = cards.map((card) => card.source);
 
 const MIDDLE_SCREEN = wWidth / 2;
 
-enum ScreenSide {
-  LEFT = -1,
-  CENTER = 0,
-  RIGHT = 1,
-}
+const removedCardsQueueFactory = (): Queue => ({
+  items: [],
+  hasItems() {
+    "worklet";
+    return !!this.items.length;
+  },
+  push(item: QueueItem) {
+    "worklet";
+    this.items.push(item);
+  },
+  pop() {
+    "worklet";
+    return this.items.pop();
+  },
+  peek() {
+    "worklet";
+    return this.hasItems()
+      ? { ...this.items[this.items.length - 1] }
+      : undefined;
+  },
+});
 
 export const Tarot = () => {
   const shuffleBack = useSharedValue(false);
   const lastRemovedCard = useSharedValue(-1);
+  const putBackCardIndex = useSharedValue<number | undefined>(undefined);
+  const removedCardsQueue = useSharedValue(removedCardsQueueFactory());
 
   const [text, setText] = useState("text");
 
@@ -67,11 +86,15 @@ export const Tarot = () => {
         absoluteX > MIDDLE_SCREEN ? ScreenSide.RIGHT : ScreenSide.LEFT;
     },
     onEnd: ({ velocityX }, ctx) => {
+      const queue = removedCardsQueue.value;
+      if (queue.hasItems() && queue.peek()?.side === ctx.screenSide) {
+        const { side, index } = queue.pop() ?? {};
+        if (ctx.screenSide === side) putBackCardIndex.value = index;
+      }
+
       if (ctx.screenSide === ScreenSide.RIGHT && velocityX < 0) {
-        console.log("onEnd", "swipe left");
         runOnJS(setText)("swipe left");
       } else if (ctx.screenSide === ScreenSide.LEFT && velocityX > 0) {
-        console.log("onEnd", "swipe right");
         runOnJS(setText)("swipe right");
       }
     },
@@ -98,6 +121,8 @@ export const Tarot = () => {
           card={card}
           shuffleBack={shuffleBack}
           lastRemovedCard={lastRemovedCard}
+          putBackCardIndex={putBackCardIndex}
+          removedCardsQueue={removedCardsQueue}
         />
       ))}
       <PanGestureHandler onGestureEvent={onGestureEvent}>
