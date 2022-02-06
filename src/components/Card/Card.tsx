@@ -1,153 +1,161 @@
 import React, { FC, useEffect, useRef } from "react";
-import { Dimensions, Image, View } from "react-native";
+import { Image, View } from "react-native";
 import {
   PanGestureHandler,
   PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import Animated, {
-  Easing,
   useAnimatedGestureHandler,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withSpring,
   withTiming,
+  withDelay,
+  Easing,
 } from "react-native-reanimated";
-import { CardProps, ScreenSide } from "../../types";
+import { Grayscale } from "react-native-color-matrix-image-filters";
+
+import { ICard, ScreenSide } from "../../types";
 import { snapPoint } from "../../utils";
 
-import stylesFactory from "./styles";
+import styles, { WINDOW_WIDTH, WINDOW_HEIGHT, CARD_WIDTH } from "./styles";
 
-const { width: wWidth, height: wHeight } = Dimensions.get("window");
-
-const IMAGE_ASPECT_RATIO = 722 / 368;
-const CARD_WIDTH = wWidth - 128;
-const CARD_HEIGHT = CARD_WIDTH * IMAGE_ASPECT_RATIO;
-const IMAGE_WIDTH = CARD_WIDTH * 0.9;
-const SIDE = (wWidth + CARD_WIDTH + 100) / 2;
+const SIDE = (WINDOW_WIDTH + CARD_WIDTH + 100) / 2;
 const SNAP_POINTS = [-SIDE, 0, SIDE];
 const DURATION = 250;
+const SHUFFLE_DELAY = 150;
 
-const styles = stylesFactory({
-  cardHeight: CARD_HEIGHT,
-  cardWidth: CARD_WIDTH,
-});
-
-export const Card: FC<CardProps> = ({
+export const Card: FC<ICard> = ({
   index,
-  card: { source },
+  source,
+  achieved,
   shuffleBack,
-  putBackCardIndex,
-  removedCardsQueue,
+  drawIndex,
+  onShuffleBack,
+  onPushCardOnStack,
 }) => {
   const thetaRef = useRef(-10 + Math.random() * 20);
 
-  const x = useSharedValue(0);
-  const y = useSharedValue(-wHeight);
+  const x = useSharedValue(achieved ? 0 : SIDE);
+  const y = useSharedValue(achieved ? -WINDOW_HEIGHT : 0);
   const scale = useSharedValue(1);
   const rotateZ = useSharedValue(0);
+  const rotateX = useSharedValue(30);
 
   useEffect(() => {
-    const delay = index * DURATION;
-    y.value = withDelay(
-      delay,
-      withTiming(0, {
-        duration: DURATION,
-        easing: Easing.inOut(Easing.ease),
-      }),
-    );
-    rotateZ.value = withDelay(
-      delay,
-      withTiming(thetaRef.current, {
-        duration: DURATION,
-        easing: Easing.inOut(Easing.ease),
-      }),
-    );
+    if (achieved) {
+      const delay = index * DURATION;
+      y.value = withDelay(
+        delay,
+        withTiming(0, {
+          duration: DURATION,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      );
+      rotateZ.value = withDelay(
+        delay,
+        withTiming(thetaRef.current, {
+          duration: DURATION,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      );
+    }
     // rotateZ.value = withDelay(delay, withTiming(thetaRef.current));
   }, []);
 
   useAnimatedReaction(
-    () => putBackCardIndex.value,
+    () => drawIndex.value,
     (value) => {
-      if (!value || value !== index) return;
+      if (value !== index) return;
       x.value = withSpring(0);
-      putBackCardIndex.value = -1;
+      drawIndex.value = undefined;
     },
+    [],
   );
 
   useAnimatedReaction(
     () => shuffleBack.value,
     (value) => {
       if (!value) return;
-      const delay = 150 * index;
+
+      const delay = SHUFFLE_DELAY * index;
       x.value = withDelay(delay, withSpring(0));
       rotateZ.value = withDelay(
         delay,
-        withSpring(thetaRef.current, {}, () => {
-          shuffleBack.value = false;
-        }),
+        withSpring(thetaRef.current, {}, () => onShuffleBack(false)),
       );
     },
+    [],
   );
 
   const onGestureEvent = useAnimatedGestureHandler<
     PanGestureHandlerGestureEvent,
     { startX: number; startY: number }
-  >({
-    onStart: (_, ctx) => {
-      ctx.startX = x.value;
-      ctx.startY = y.value;
-      rotateZ.value = withTiming(0, { easing: Easing.inOut(Easing.ease) });
-      scale.value = withTiming(1.1, { easing: Easing.inOut(Easing.ease) });
-    },
-    onActive: (event, ctx) => {
-      x.value = ctx.startX + event.translationX;
-      y.value = ctx.startY + event.translationY;
-    },
-    onFinish: ({ velocityX, velocityY }) => {
-      const dest = snapPoint(x.value, velocityX, SNAP_POINTS);
-      if (dest !== 0) {
-        removedCardsQueue.value.push({
-          side: dest < 0 ? ScreenSide.LEFT : ScreenSide.RIGHT,
-          index,
-        });
-      }
+  >(
+    {
+      onStart: (_, ctx) => {
+        ctx.startX = x.value;
+        ctx.startY = y.value;
+        rotateZ.value = withTiming(0, { easing: Easing.inOut(Easing.ease) });
+        scale.value = withTiming(1.1, { easing: Easing.inOut(Easing.ease) });
+        rotateX.value = withTiming(0, { easing: Easing.inOut(Easing.ease) });
+      },
+      onActive: (event, ctx) => {
+        x.value = ctx.startX + event.translationX;
+        y.value = ctx.startY + event.translationY;
+      },
+      onFinish: ({ velocityX, velocityY }) => {
+        const dest = snapPoint(x.value, velocityX, SNAP_POINTS);
 
-      x.value = withSpring(dest, { velocity: velocityX });
-      y.value = withSpring(0, { velocity: velocityY });
-      rotateZ.value = withTiming(0);
-      scale.value = withTiming(1, { easing: Easing.inOut(Easing.ease) }, () => {
-        if (index === 0 && dest) {
-          shuffleBack.value = true;
-        }
-      });
-    },
-  });
+        dest &&
+          onPushCardOnStack({
+            side: dest < 0 ? ScreenSide.LEFT : ScreenSide.RIGHT,
+            index,
+          });
 
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 1000 },
-      { rotateX: "30deg" },
-      { translateX: x.value },
-      { translateY: y.value },
-      { rotateY: `${rotateZ.value / 10}deg` },
-      { rotateZ: `${rotateZ.value}deg` },
-      { scale: scale.value },
-    ],
-  }));
+        x.value = withSpring(dest, { velocity: velocityX });
+        y.value = withSpring(0, { velocity: velocityY });
+        rotateZ.value = withTiming(0);
+        rotateX.value = withTiming(30);
+        scale.value = withTiming(
+          1,
+          { easing: Easing.inOut(Easing.ease) },
+          () => {
+            !index && dest && onShuffleBack(true);
+          },
+        );
+      },
+    },
+    [],
+  );
+
+  const rStyle = useAnimatedStyle(
+    () => ({
+      transform: [
+        { perspective: 1000 },
+        { rotateX: `${rotateX.value}deg` },
+        { translateX: x.value },
+        { translateY: y.value },
+        { rotateY: `${rotateZ.value / 10}deg` },
+        { rotateZ: `${rotateZ.value}deg` },
+        { scale: scale.value },
+      ],
+    }),
+    [],
+  );
 
   return (
     <View style={styles.container} pointerEvents="box-none">
       <PanGestureHandler onGestureEvent={onGestureEvent}>
-        <Animated.View style={[styles.card, style]}>
-          <Image
-            source={source}
-            style={{
-              width: IMAGE_WIDTH,
-              height: IMAGE_WIDTH * IMAGE_ASPECT_RATIO,
-            }}
-          />
+        <Animated.View style={[styles.card, rStyle]}>
+          <Grayscale amount={achieved ? 0 : 1}>
+            <Image
+              source={{ uri: source }}
+              blurRadius={achieved ? 0 : 20}
+              style={[styles.image]}
+            />
+          </Grayscale>
         </Animated.View>
       </PanGestureHandler>
     </View>

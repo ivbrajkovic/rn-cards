@@ -11,10 +11,12 @@
   },
   "dependencies": {
     "expo": "~44.0.0",
+    "expo-dev-client": "~0.8.3",
     "expo-status-bar": "~1.2.0",
     "react": "17.0.1",
     "react-dom": "17.0.1",
     "react-native": "0.64.3",
+    "react-native-color-matrix-image-filters": "^5.2.10",
     "react-native-gesture-handler": "~2.1.0",
     "react-native-reanimated": "~2.3.1",
     "react-native-web": "0.17.1"

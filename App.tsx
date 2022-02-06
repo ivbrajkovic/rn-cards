@@ -1,12 +1,10 @@
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Tarot } from "./src/components/Tarot";
+import Achievements from "./src/components/Achievements";
 
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Tarot />
+      <Achievements />
     </GestureHandlerRootView>
   );
 }
