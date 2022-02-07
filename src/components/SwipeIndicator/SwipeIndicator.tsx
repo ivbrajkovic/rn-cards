@@ -56,6 +56,7 @@ export const SwipeIndicator: FC<ISwipeIndicator> = ({
 
     const opacity = withRepeat(
       withSequence(
+        withTiming(0, { duration: 0 }),
         withTiming(1, { duration: 600 }),
         withTiming(0, { duration: 400 }),
       ),
@@ -68,6 +69,7 @@ export const SwipeIndicator: FC<ISwipeIndicator> = ({
       withSequence(
         withTiming(fromValue, { duration: 0 }),
         withTiming(toValue, { duration: 1000 }),
+        withTiming(fromValue, { duration: 0 }),
       ),
       3,
     );

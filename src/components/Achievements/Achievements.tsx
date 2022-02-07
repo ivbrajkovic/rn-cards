@@ -30,14 +30,12 @@ const sources: ReturnType<typeof require>[] = [
   "https://stspaceuat001.blob.core.windows.net/space/loyalty/avatars/Swashbuckler%402x.png",
 ];
 
-export const Achievements = ({ initialIndex = 5 }) => {
+export const Achievements = ({ initialIndex = 7 }) => {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     (async () => {
-      console.log(new Date());
-      const res = await imagePrefetch(sources.slice(0, initialIndex));
-
-      console.log(new Date(), res);
+      await imagePrefetch(sources.slice(0, initialIndex));
+      // await new Promise((resolve) => setTimeout(resolve, 1000));
       setLoading(false);
     })();
   }, []);
@@ -88,7 +86,19 @@ export const Achievements = ({ initialIndex = 5 }) => {
     screenSide.value = stack[stack.length - 1]?.side;
   }, []);
 
-  if (loading) return <ActivityIndicator size="large" />;
+  if (loading)
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator size="large" />
+      </View>
+    );
+
   return (
     <View style={styles.container}>
       {sources.map((source, index) => (

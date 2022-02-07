@@ -13,6 +13,7 @@ import Animated, {
   withTiming,
   withDelay,
   Easing,
+  runOnJS,
 } from "react-native-reanimated";
 import { Grayscale } from "react-native-color-matrix-image-filters";
 
@@ -40,12 +41,22 @@ export const Card: FC<ICard> = ({
   const x = useSharedValue(achieved ? 0 : SIDE);
   const y = useSharedValue(achieved ? -WINDOW_HEIGHT : 0);
   const scale = useSharedValue(1);
+  const opacity = useSharedValue(0);
   const rotateZ = useSharedValue(0);
   const rotateX = useSharedValue(30);
 
   useEffect(() => {
+    const delay = index * DURATION;
+
+    opacity.value = withDelay(
+      delay,
+      withTiming(1, {
+        duration: DURATION,
+        easing: Easing.in(Easing.exp),
+      }),
+    );
+
     if (achieved) {
-      const delay = index * DURATION;
       y.value = withDelay(
         delay,
         withTiming(0, {
@@ -53,6 +64,7 @@ export const Card: FC<ICard> = ({
           easing: Easing.inOut(Easing.ease),
         }),
       );
+
       rotateZ.value = withDelay(
         delay,
         withTiming(thetaRef.current, {
@@ -61,6 +73,7 @@ export const Card: FC<ICard> = ({
         }),
       );
     }
+
     // rotateZ.value = withDelay(delay, withTiming(thetaRef.current));
   }, []);
 
@@ -68,7 +81,11 @@ export const Card: FC<ICard> = ({
     () => drawIndex.value,
     (value) => {
       if (value !== index) return;
+
       x.value = withSpring(0);
+      rotateZ.value = withTiming(thetaRef.current, {
+        easing: Easing.in(Easing.exp),
+      });
       drawIndex.value = undefined;
     },
     [],
@@ -80,7 +97,7 @@ export const Card: FC<ICard> = ({
       if (!value) return;
 
       const delay = SHUFFLE_DELAY * index;
-      x.value = withDelay(delay, withSpring(0));
+      x.value = withDelay(delay, withSpring(achieved ? 0 : SIDE));
       rotateZ.value = withDelay(
         delay,
         withSpring(thetaRef.current, {}, () => onShuffleBack(false)),
@@ -132,6 +149,7 @@ export const Card: FC<ICard> = ({
 
   const rStyle = useAnimatedStyle(
     () => ({
+      opacity: opacity.value,
       transform: [
         { perspective: 1000 },
         { rotateX: `${rotateX.value}deg` },
@@ -151,9 +169,9 @@ export const Card: FC<ICard> = ({
         <Animated.View style={[styles.card, rStyle]}>
           <Grayscale amount={achieved ? 0 : 1}>
             <Image
-              source={{ uri: source }}
+              source={{ uri: source, cache: "force-cache" }}
               blurRadius={achieved ? 0 : 20}
-              style={[styles.image]}
+              style={styles.image}
             />
           </Grayscale>
         </Animated.View>
