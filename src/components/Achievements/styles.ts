@@ -9,6 +9,11 @@ const block = {
 };
 
 export default StyleSheet.create({
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   container: {
     flex: 1,
     backgroundColor: "lightblue",

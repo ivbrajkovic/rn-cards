@@ -8,7 +8,7 @@ import Card from "./../Card";
 import SwipeIndicator from "./../SwipeIndicator";
 import styles from "./styles";
 
-const sources: ReturnType<typeof require>[] = [
+const sources = [
   "https://stspaceuat001.blob.core.windows.net/space/loyalty/avatars/Pixie%402x.png",
   "https://stspaceuat001.blob.core.windows.net/space/loyalty/avatars/Elf%402x.png",
   "https://stspaceuat001.blob.core.windows.net/space/loyalty/avatars/Wizzard%402x.png",
@@ -30,36 +30,26 @@ const sources: ReturnType<typeof require>[] = [
   "https://stspaceuat001.blob.core.windows.net/space/loyalty/avatars/Swashbuckler%402x.png",
 ];
 
-export const Achievements = ({ initialIndex = 7 }) => {
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    (async () => {
-      await imagePrefetch(sources.slice(0, initialIndex));
-      // await new Promise((resolve) => setTimeout(resolve, 1000));
-      setLoading(false);
-    })();
-  }, []);
-
+export const Achievements = ({ initialIndex = 3 }) => {
   const shuffleBack = useSharedValue(false);
-  const screenSide = useSharedValue<ScreenSide | undefined>(undefined);
   const drawCardIndex = useSharedValue<number | undefined>(undefined);
-  const removedCardsStack = useSharedValue<IStackItem[]>(
-    sources
+
+  const screenSide = useSharedValue<ScreenSide | undefined>(
+    initialIndex < sources.length - 1 ? ScreenSide.RIGHT : undefined,
+  );
+
+  const initRemovedCardsStack = () => {
+    "worklet";
+    return sources
       .map((_, index) =>
         index >= initialIndex ? { index, side: ScreenSide.RIGHT } : undefined,
       )
       .filter((item) => !!item)
-      .reverse() as IStackItem[],
-  );
+      .reverse() as IStackItem[];
+  };
 
-  useAnimatedReaction(
-    () => removedCardsStack.value,
-    (stack) => {
-      screenSide.value = stack.length
-        ? stack[stack.length - 1].side
-        : undefined;
-    },
-    [],
+  const removedCardsStack = useSharedValue<IStackItem[]>(
+    initRemovedCardsStack(),
   );
 
   const onShuffleBack = useCallback((shuffle) => {
@@ -68,7 +58,8 @@ export const Achievements = ({ initialIndex = 7 }) => {
     if (shuffle) {
       screenSide.value = undefined;
     } else {
-      removedCardsStack.value = [];
+      screenSide.value = ScreenSide.RIGHT;
+      removedCardsStack.value = initRemovedCardsStack();
     }
   }, []);
 
@@ -86,15 +77,18 @@ export const Achievements = ({ initialIndex = 7 }) => {
     screenSide.value = stack[stack.length - 1]?.side;
   }, []);
 
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      await imagePrefetch(sources.slice(0, initialIndex));
+      // await new Promise((resolve) => setTimeout(resolve, 1000));
+      setLoading(false);
+    })();
+  }, []);
+
   if (loading)
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
+      <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" />
       </View>
     );

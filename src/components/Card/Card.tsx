@@ -96,12 +96,19 @@ export const Card: FC<ICard> = ({
     (value) => {
       if (!value) return;
 
-      const delay = SHUFFLE_DELAY * index;
-      x.value = withDelay(delay, withSpring(achieved ? 0 : SIDE));
-      rotateZ.value = withDelay(
-        delay,
-        withSpring(thetaRef.current, {}, () => onShuffleBack(false)),
-      );
+      if (achieved) {
+        const delay = SHUFFLE_DELAY * index;
+        x.value = withDelay(delay, withSpring(0));
+        rotateZ.value = withDelay(
+          delay,
+          withSpring(thetaRef.current, {}, () => {
+            !index && onShuffleBack(false);
+          }),
+        );
+      } else {
+        x.value = SIDE;
+        rotateZ.value = thetaRef.current;
+      }
     },
     [],
   );

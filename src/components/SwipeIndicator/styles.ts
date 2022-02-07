@@ -19,9 +19,10 @@ export default StyleSheet.create({
     position: "absolute",
     width: 50,
     height: 50,
+    borderWidth: 10,
     borderLeftColor: "white",
     borderBottomColor: "white",
-    borderColor: "transparent",
-    borderWidth: 10,
+    borderTopColor: "transparent",
+    borderRightColor: "transparent",
   },
 });
