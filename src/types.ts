@@ -6,17 +6,17 @@ export enum ScreenSide {
   RIGHT = 1,
 }
 
-export interface CardArrayItem {
-  source: string;
-  screenSide: ScreenSide | undefined;
+export interface AchievementsProps {
+  initialIndex: number;
+  sources: string[];
 }
 
 export interface CardProps {
   index: number;
   achieved: boolean;
-  currentIndex: Animated.SharedValue<number>;
   source: ReturnType<typeof require>;
-  shuffleBack: Animated.SharedValue<boolean>;
+  resetStack: Animated.SharedValue<boolean>;
+  currentIndex: Animated.SharedValue<number>;
   onResetStack: (shuffle?: boolean) => void;
   onPopFromStack: (screenSide: ScreenSide) => void;
 }

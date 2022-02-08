@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useRef } from "react";
+import React, { FC, useRef, useState } from "react";
 import { Image, View } from "react-native";
 import {
   PanGestureHandler,
@@ -11,7 +11,6 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-  withDelay,
   Easing,
   runOnJS,
 } from "react-native-reanimated";
@@ -25,89 +24,64 @@ import styles, { WINDOW_WIDTH, WINDOW_HEIGHT, CARD_WIDTH } from "./styles";
 const SIDE = (WINDOW_WIDTH + CARD_WIDTH + 100) / 2;
 const SNAP_POINTS = [-SIDE, 0, SIDE];
 const DURATION = 250;
-const SHUFFLE_DELAY = 150;
+const LOWER_RENDER_LIMIT = 4;
+const UPPER_RENDER_LIMIT = 1;
 
 export const Card: FC<CardProps> = ({
   index,
   currentIndex,
   source,
   achieved,
-  shuffleBack,
+  resetStack,
   onResetStack,
   onPopFromStack,
 }) => {
   const thetaRef = useRef(-10 + Math.random() * 20);
+  const initialRender = useSharedValue(achieved);
 
-  const x = useSharedValue(achieved ? 0 : SIDE);
-  const y = useSharedValue(achieved ? -WINDOW_HEIGHT : 0);
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
-  const rotateZ = useSharedValue(0);
   const rotateX = useSharedValue(30);
+  const rotateZ = useSharedValue(achieved ? 0 : thetaRef.current);
+  const translateX = useSharedValue(achieved ? 0 : SIDE);
+  const translateY = useSharedValue(achieved ? -WINDOW_HEIGHT : 0);
 
-  useEffect(() => {
-    const delay = index * DURATION;
-
-    opacity.value = withDelay(
-      delay,
-      withTiming(1, {
-        duration: DURATION,
-        easing: Easing.in(Easing.exp),
-      }),
-    );
-
-    if (achieved) {
-      y.value = withDelay(
-        delay,
-        withTiming(0, {
-          duration: DURATION,
-          easing: Easing.inOut(Easing.ease),
-        }),
-      );
-
-      rotateZ.value = withDelay(
-        delay,
-        withTiming(thetaRef.current, {
-          duration: DURATION,
-          easing: Easing.inOut(Easing.ease),
-        }),
-      );
-    }
-
-    // rotateZ.value = withDelay(delay, withTiming(thetaRef.current));
-  }, []);
-
-  // Push on stack
   useAnimatedReaction(
-    () => currentIndex.value,
+    () => resetStack.value,
     () => {
-      if (currentIndex.value === index) {
-        x.value = withSpring(0);
-        rotateZ.value = withTiming(thetaRef.current, {
-          easing: Easing.in(Easing.exp),
-        });
-      }
+      if (!resetStack.value) return;
+
+      opacity.value = 0;
+      if (!achieved) translateX.value = SIDE;
     },
   );
 
-  // Reset stack
   useAnimatedReaction(
-    () => shuffleBack.value,
-    (value) => {
-      if (!value) return;
+    () => currentIndex.value,
+    () => {
+      if (currentIndex.value !== index) return;
+
+      opacity.value = withTiming(1, {
+        duration: DURATION,
+        easing: Easing.in(Easing.exp),
+      });
+
+      if (!initialRender.value) {
+        translateX.value = withSpring(0);
+        return;
+      }
+
+      initialRender.value = false;
 
       if (achieved) {
-        const delay = SHUFFLE_DELAY * index;
-        x.value = withDelay(delay, withSpring(0));
-        rotateZ.value = withDelay(
-          delay,
-          withSpring(thetaRef.current, {}, () => {
-            !index && onResetStack(false);
-          }),
-        );
-      } else {
-        x.value = SIDE;
-        rotateZ.value = thetaRef.current;
+        translateY.value = withTiming(0, {
+          duration: DURATION,
+          easing: Easing.inOut(Easing.ease),
+        });
+        rotateZ.value = withTiming(thetaRef.current, {
+          duration: DURATION,
+          easing: Easing.inOut(Easing.ease),
+        });
       }
     },
     [],
@@ -119,27 +93,27 @@ export const Card: FC<CardProps> = ({
   >(
     {
       onStart: (_, ctx) => {
-        ctx.startX = x.value;
-        ctx.startY = y.value;
-        rotateZ.value = withTiming(0, { easing: Easing.inOut(Easing.ease) });
+        ctx.startX = translateX.value;
+        ctx.startY = translateY.value;
         scale.value = withTiming(1.1, { easing: Easing.inOut(Easing.ease) });
+        rotateZ.value = withTiming(0, { easing: Easing.inOut(Easing.ease) });
         rotateX.value = withTiming(0, { easing: Easing.inOut(Easing.ease) });
       },
       onActive: (event, ctx) => {
-        x.value = ctx.startX + event.translationX;
-        y.value = ctx.startY + event.translationY;
+        translateX.value = ctx.startX + event.translationX;
+        translateY.value = ctx.startY + event.translationY;
       },
       onFinish: ({ velocityX, velocityY }) => {
-        const dest = snapPoint(x.value, velocityX, SNAP_POINTS);
+        const dest = snapPoint(translateX.value, velocityX, SNAP_POINTS);
 
         if (dest) {
-          const screenSide = dest < 0 ? ScreenSide.LEFT : ScreenSide.RIGHT;
-          onPopFromStack(screenSide);
+          onPopFromStack(dest < 0 ? ScreenSide.LEFT : ScreenSide.RIGHT);
+          opacity.value = withTiming(0);
         }
 
-        x.value = withSpring(dest, { velocity: velocityX });
-        y.value = withSpring(0, { velocity: velocityY });
-        rotateZ.value = withTiming(0);
+        translateX.value = withSpring(dest, { velocity: velocityX });
+        translateY.value = withSpring(0, { velocity: velocityY });
+        rotateZ.value = withTiming(thetaRef.current);
         rotateX.value = withTiming(30);
         scale.value = withTiming(
           1,
@@ -159,8 +133,8 @@ export const Card: FC<CardProps> = ({
       transform: [
         { perspective: 1000 },
         { rotateX: `${rotateX.value}deg` },
-        { translateX: x.value },
-        { translateY: y.value },
+        { translateX: translateX.value },
+        { translateY: translateY.value },
         { rotateY: `${rotateZ.value / 10}deg` },
         { rotateZ: `${rotateZ.value}deg` },
         { scale: scale.value },
@@ -168,6 +142,19 @@ export const Card: FC<CardProps> = ({
     }),
     [],
   );
+
+  const [isRender, setRender] = useState(index <= currentIndex.value);
+  useAnimatedReaction(
+    () => currentIndex.value,
+    () => {
+      const lowerLimit = currentIndex.value - LOWER_RENDER_LIMIT;
+      const upperLimit = currentIndex.value + UPPER_RENDER_LIMIT;
+
+      if (upperLimit < index || lowerLimit > index) runOnJS(setRender)(false);
+      else runOnJS(setRender)(true);
+    },
+  );
+  if (!isRender) return null;
 
   return (
     <View style={styles.container} pointerEvents="box-none">
