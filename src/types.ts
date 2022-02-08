@@ -6,22 +6,22 @@ export enum ScreenSide {
   RIGHT = 1,
 }
 
-export interface IStackItem {
-  side: ScreenSide;
-  index: number;
+export interface CardArrayItem {
+  source: string;
+  screenSide: ScreenSide | undefined;
 }
 
-export interface ICard {
+export interface CardProps {
   index: number;
   achieved: boolean;
+  currentIndex: Animated.SharedValue<number>;
   source: ReturnType<typeof require>;
   shuffleBack: Animated.SharedValue<boolean>;
-  drawIndex: Animated.SharedValue<number | undefined>;
-  onShuffleBack: (shuffle?: boolean) => void;
-  onPushCardOnStack: (item: IStackItem) => void;
+  onResetStack: (shuffle?: boolean) => void;
+  onPopFromStack: (screenSide: ScreenSide) => void;
 }
 
-export interface ISwipeIndicator {
+export interface SwipeIndicatorProps {
   screenSide: Animated.SharedValue<ScreenSide | undefined>;
   onSwipe: () => void;
 }

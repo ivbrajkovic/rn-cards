@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { useAnimatedReaction, useSharedValue } from "react-native-reanimated";
-import { IStackItem, ScreenSide } from "../../types";
+import { useSharedValue } from "react-native-reanimated";
+import { ScreenSide } from "../../types";
 import { imagePrefetch } from "../../utils";
 
 import Card from "./../Card";
@@ -32,56 +32,52 @@ const sources = [
 
 export const Achievements = ({ initialIndex = 3 }) => {
   const shuffleBack = useSharedValue(false);
-  const drawCardIndex = useSharedValue<number | undefined>(undefined);
+  const currentIndex = useSharedValue<number>(initialIndex);
+  const screenSide = useSharedValue<ScreenSide | undefined>(ScreenSide.RIGHT);
 
-  const screenSide = useSharedValue<ScreenSide | undefined>(
-    initialIndex < sources.length - 1 ? ScreenSide.RIGHT : undefined,
-  );
-
-  const initRemovedCardsStack = () => {
+  const initScreenSideArray = () => {
     "worklet";
-    return sources
-      .map((_, index) =>
-        index >= initialIndex ? { index, side: ScreenSide.RIGHT } : undefined,
-      )
-      .filter((item) => !!item)
-      .reverse() as IStackItem[];
+    return sources.map((_, index) =>
+      index <= initialIndex ? undefined : ScreenSide.RIGHT,
+    );
   };
 
-  const removedCardsStack = useSharedValue<IStackItem[]>(
-    initRemovedCardsStack(),
+  const screenSideArray = useSharedValue<Array<ScreenSide | undefined>>(
+    initScreenSideArray(),
   );
 
-  const onShuffleBack = useCallback((shuffle) => {
+  const onResetStack = useCallback((shuffle) => {
     "worklet";
     shuffleBack.value = shuffle;
     if (shuffle) {
-      screenSide.value = undefined;
+      screenSide.value = ScreenSide.CENTER;
     } else {
       screenSide.value = ScreenSide.RIGHT;
-      removedCardsStack.value = initRemovedCardsStack();
+      currentIndex.value = initialIndex;
+      screenSideArray.value = initScreenSideArray();
     }
   }, []);
 
-  const onPushCardOnStack = useCallback((item: IStackItem) => {
+  const onPopFromStack = useCallback((side: ScreenSide) => {
     "worklet";
-    removedCardsStack.value.push(item);
-    screenSide.value = item.side;
+    screenSideArray.value[currentIndex.value] = side;
+    screenSide.value = side;
+    currentIndex.value -= 1;
   }, []);
 
-  const onSwipe = useCallback(() => {
+  const onPushOnStack = useCallback(() => {
     "worklet";
-    const stack = removedCardsStack.value;
-    if (!stack.length) return;
-    drawCardIndex.value = stack.pop()!.index;
-    screenSide.value = stack[stack.length - 1]?.side;
+    currentIndex.value += 1;
+    screenSide.value =
+      currentIndex.value < screenSideArray.value.length - 1
+        ? screenSideArray.value[currentIndex.value + 1]
+        : undefined;
   }, []);
 
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     (async () => {
       await imagePrefetch(sources.slice(0, initialIndex));
-      // await new Promise((resolve) => setTimeout(resolve, 1000));
       setLoading(false);
     })();
   }, []);
@@ -99,15 +95,15 @@ export const Achievements = ({ initialIndex = 3 }) => {
         <Card
           key={index}
           index={index}
+          currentIndex={currentIndex}
           source={source}
-          achieved={index < initialIndex}
+          achieved={index <= initialIndex}
           shuffleBack={shuffleBack}
-          drawIndex={drawCardIndex}
-          onShuffleBack={onShuffleBack}
-          onPushCardOnStack={onPushCardOnStack}
+          onResetStack={onResetStack}
+          onPopFromStack={onPopFromStack}
         />
       ))}
-      <SwipeIndicator screenSide={screenSide} onSwipe={onSwipe} />
+      <SwipeIndicator screenSide={screenSide} onSwipe={onPushOnStack} />
     </View>
   );
 };

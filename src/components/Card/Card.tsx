@@ -17,7 +17,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Grayscale } from "react-native-color-matrix-image-filters";
 
-import { ICard, ScreenSide } from "../../types";
+import { CardProps, ScreenSide } from "../../types";
 import { snapPoint } from "../../utils";
 
 import styles, { WINDOW_WIDTH, WINDOW_HEIGHT, CARD_WIDTH } from "./styles";
@@ -27,14 +27,14 @@ const SNAP_POINTS = [-SIDE, 0, SIDE];
 const DURATION = 250;
 const SHUFFLE_DELAY = 150;
 
-export const Card: FC<ICard> = ({
+export const Card: FC<CardProps> = ({
   index,
+  currentIndex,
   source,
   achieved,
   shuffleBack,
-  drawIndex,
-  onShuffleBack,
-  onPushCardOnStack,
+  onResetStack,
+  onPopFromStack,
 }) => {
   const thetaRef = useRef(-10 + Math.random() * 20);
 
@@ -77,20 +77,20 @@ export const Card: FC<ICard> = ({
     // rotateZ.value = withDelay(delay, withTiming(thetaRef.current));
   }, []);
 
+  // Push on stack
   useAnimatedReaction(
-    () => drawIndex.value,
-    (value) => {
-      if (value !== index) return;
-
-      x.value = withSpring(0);
-      rotateZ.value = withTiming(thetaRef.current, {
-        easing: Easing.in(Easing.exp),
-      });
-      drawIndex.value = undefined;
+    () => currentIndex.value,
+    () => {
+      if (currentIndex.value === index) {
+        x.value = withSpring(0);
+        rotateZ.value = withTiming(thetaRef.current, {
+          easing: Easing.in(Easing.exp),
+        });
+      }
     },
-    [],
   );
 
+  // Reset stack
   useAnimatedReaction(
     () => shuffleBack.value,
     (value) => {
@@ -102,7 +102,7 @@ export const Card: FC<ICard> = ({
         rotateZ.value = withDelay(
           delay,
           withSpring(thetaRef.current, {}, () => {
-            !index && onShuffleBack(false);
+            !index && onResetStack(false);
           }),
         );
       } else {
@@ -132,11 +132,10 @@ export const Card: FC<ICard> = ({
       onFinish: ({ velocityX, velocityY }) => {
         const dest = snapPoint(x.value, velocityX, SNAP_POINTS);
 
-        dest &&
-          onPushCardOnStack({
-            side: dest < 0 ? ScreenSide.LEFT : ScreenSide.RIGHT,
-            index,
-          });
+        if (dest) {
+          const screenSide = dest < 0 ? ScreenSide.LEFT : ScreenSide.RIGHT;
+          onPopFromStack(screenSide);
+        }
 
         x.value = withSpring(dest, { velocity: velocityX });
         y.value = withSpring(0, { velocity: velocityY });
@@ -146,7 +145,7 @@ export const Card: FC<ICard> = ({
           1,
           { easing: Easing.inOut(Easing.ease) },
           () => {
-            !index && dest && onShuffleBack(true);
+            !index && dest && onResetStack(true);
           },
         );
       },

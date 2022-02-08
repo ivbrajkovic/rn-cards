@@ -10,11 +10,11 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { ISwipeIndicator, ScreenSide } from "../../types";
+import { SwipeIndicatorProps, ScreenSide } from "../../types";
 
 import styles, { INDICATOR_WIDTH, WINDOW_WIDTH } from "./styles";
 
-export const SwipeIndicator: FC<ISwipeIndicator> = ({
+export const SwipeIndicator: FC<SwipeIndicatorProps> = ({
   screenSide,
   onSwipe: onDrawCard,
 }) => {
