@@ -37,6 +37,8 @@ export const Card: FC<CardProps> = ({
   onPopFromStack,
 }) => {
   const thetaRef = useRef(-10 + Math.random() * 20);
+  const [isRender, setRender] = useState(index <= currentIndex.value);
+
   const initialRender = useSharedValue(achieved);
 
   const scale = useSharedValue(1);
@@ -50,15 +52,25 @@ export const Card: FC<CardProps> = ({
     () => resetStack.value,
     () => {
       if (!resetStack.value) return;
-
-      opacity.value = 0;
       if (!achieved) translateX.value = SIDE;
+      opacity.value = 0;
     },
   );
 
   useAnimatedReaction(
     () => currentIndex.value,
     () => {
+      const lowerLimit = currentIndex.value - LOWER_RENDER_LIMIT;
+      const upperLimit = currentIndex.value + UPPER_RENDER_LIMIT;
+
+      if (upperLimit < index || lowerLimit > index) {
+        opacity.value = 0;
+        runOnJS(setRender)(false);
+      } else {
+        !translateX.value && (opacity.value = 1);
+        runOnJS(setRender)(true);
+      }
+
       if (currentIndex.value !== index) return;
 
       opacity.value = withTiming(1, {
@@ -108,7 +120,7 @@ export const Card: FC<CardProps> = ({
 
         if (dest) {
           onPopFromStack(dest < 0 ? ScreenSide.LEFT : ScreenSide.RIGHT);
-          opacity.value = withTiming(0);
+          opacity.value = withTiming(0, { easing: Easing.out(Easing.ease) });
         }
 
         translateX.value = withSpring(dest, { velocity: velocityX });
@@ -143,17 +155,6 @@ export const Card: FC<CardProps> = ({
     [],
   );
 
-  const [isRender, setRender] = useState(index <= currentIndex.value);
-  useAnimatedReaction(
-    () => currentIndex.value,
-    () => {
-      const lowerLimit = currentIndex.value - LOWER_RENDER_LIMIT;
-      const upperLimit = currentIndex.value + UPPER_RENDER_LIMIT;
-
-      if (upperLimit < index || lowerLimit > index) runOnJS(setRender)(false);
-      else runOnJS(setRender)(true);
-    },
-  );
   if (!isRender) return null;
 
   return (
