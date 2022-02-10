@@ -20,6 +20,7 @@ import { CardProps, ScreenSide } from "../../types";
 import { snapPoint } from "../../utils";
 
 import styles, { WINDOW_WIDTH, WINDOW_HEIGHT, CARD_WIDTH } from "./styles";
+import useCountRenders from "../../hooks/useCountRenders";
 
 const SIDE = (WINDOW_WIDTH + CARD_WIDTH + 100) / 2;
 const SNAP_POINTS = [-SIDE, 0, SIDE];
@@ -36,6 +37,8 @@ export const Card: FC<CardProps> = ({
   onResetStack,
   onPopFromStack,
 }) => {
+  // useCountRenders({ title: "Card " + index });
+
   const thetaRef = useRef(-10 + Math.random() * 20);
   const [isRender, setRender] = useState(index <= currentIndex.value);
 

@@ -1,6 +1,7 @@
 import { FC, memo, useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
 import { runOnJS, useSharedValue } from "react-native-reanimated";
+import useCountRenders from "../../hooks/useCountRenders";
 import { AchievementsProps, ScreenSide } from "../../types";
 import { delay, imagePrefetch } from "../../utils";
 import Loader from "../Loader";
@@ -9,10 +10,14 @@ import Card from "./../Card";
 import SwipeIndicator from "./../SwipeIndicator";
 import styles from "./styles";
 
+const LOWER_RENDER_LIMIT = 4;
+const UPPER_RENDER_LIMIT = 1;
 const DELAY = 300;
 
 export const Achievements: FC<AchievementsProps> = memo(
   ({ initialIndex = 0, sources = [] }) => {
+    // useCountRenders({ title: "Achievements" });
+
     const resetStack = useSharedValue(true);
     const currentIndex = useSharedValue<number>(-1);
     const screenSide = useSharedValue<ScreenSide | undefined>(ScreenSide.RIGHT);
